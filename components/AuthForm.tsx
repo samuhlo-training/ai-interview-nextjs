@@ -12,6 +12,13 @@ import { toast } from "sonner";
 import FormField from "./FormField";
 import { useRouter } from "next/navigation";
 
+import { signIn, signUp } from "@/lib/actions/auth.action";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
+import { auth } from "@/firabase/client";
+
 const authFormSchema = (type: FormType) => {
   return z.object({
     name: type === "sign-up" ? z.string().min(3) : z.string().optional(),
@@ -22,8 +29,8 @@ const authFormSchema = (type: FormType) => {
 
 const AuthForm = ({ type }: { type: FormType }) => {
   const router = useRouter();
+
   const formSchema = authFormSchema(type);
-  // 1. Define your form.
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -33,13 +40,47 @@ const AuthForm = ({ type }: { type: FormType }) => {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       if (type === "sign-up") {
+        const { name, email, password } = values;
+        const userCredentials = await createUserWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+
+        const result = await signUp({
+          uid: userCredentials.user.uid,
+          name: name!,
+          email,
+          password,
+        });
+        if (!result?.success) {
+          toast.error(result?.message);
+          return;
+        }
+
         toast.success("Account created successfully!. Please sign in.");
         router.push("/sign-in");
         console.log("SIGN-UP", values);
       } else {
+        const { email, password } = values;
+
+        const userCredentials = await signInWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+        const idToken = await userCredentials.user.getIdToken();
+        if (!idToken) {
+          toast.error("Failed to sign in");
+          return;
+        }
+        await signIn({ email, idToken });
+        toast.success("Signed in successfully!");
+        router.push("/");
+
         toast.success("Signed in successfully!");
         router.push("/");
         console.log("SIGN-IN", values);
@@ -100,7 +141,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
             href={!isSignIn ? "/sign-in" : "/sign-up"}
             className="font-bold text-user-primary ml-1"
           >
-            {!isSignIn ? "Sign up" : "Sign in"}
+            {!isSignIn ? "Sign in" : "Create an account"}
           </Link>
         </p>
       </div>
