@@ -8,7 +8,7 @@ import DisplayTechIcons from "@/components/DisplayTechIcons";
 import Agent from "@/components/Agent";
 
 const Page = async ({ params }: RouteParams) => {
-  const { id } = params;
+  const { id } = await params;
   const user = await getCurrentUser();
   const interview = await getInterviewById(id);
 
@@ -35,8 +35,8 @@ const Page = async ({ params }: RouteParams) => {
         </p>
       </div>
       <Agent
-        userName={user?.name}
-        type={user?.id}
+        userName={user?.name || ""}
+        userId={user?.id}
         interviewId={id}
         type="interview"
         questions={interview.questions}
