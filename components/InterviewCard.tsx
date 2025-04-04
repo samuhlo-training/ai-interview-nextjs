@@ -16,8 +16,6 @@ const InterviewCard = async ({
   createdAt,
 }: InterviewCardProps) => {
   const currentUser = await getCurrentUser();
-  console.log("currentUser", currentUser);
-  console.log("userId", userId);
   const feedback =
     userId === currentUser?.id && id
       ? await getFeedbackByInterviewId({

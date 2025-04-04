@@ -125,6 +125,12 @@ const Agent = ({
     await vapi.stop();
   };
 
+  const handleCancel = async () => {
+    setCallStatus(CallStatus.INACTIVE);
+    await vapi.stop();
+    router.push("/");
+  };
+
   const lastestMessage = messages[messages.length - 1]?.content;
 
   const isCallInactiveOrFinished =
@@ -175,9 +181,9 @@ const Agent = ({
         </div>
       )}
 
-      <div className="w-full flex justify-center">
+      <div className="w-full flex-center flex-col gap-4">
         {callStatus !== "ACTIVE" ? (
-          <button className="relative btn-call" onClick={handleCall}>
+          <button className="relative btn-call w-fit" onClick={handleCall}>
             <span
               className={cn(
                 "absolute animate-ping rounded-full opacity-75",
@@ -191,6 +197,13 @@ const Agent = ({
             End
           </button>
         )}
+        <button
+          className="btn-disconnect w-fit flex justify-center"
+          onClick={handleCancel}
+        >
+          {" "}
+          Cancel Interview{" "}
+        </button>
       </div>
     </>
   );
