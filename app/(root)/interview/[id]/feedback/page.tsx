@@ -8,6 +8,7 @@ import {
   getFeedbackByInterviewId,
 } from "@/lib/actions/general.action";
 import { Button } from "@/components/ui/button";
+import RetakeInterviewButton from "@/components/RetakeInterviewButton";
 
 const Page = async ({ params }: RouteParams) => {
   const { id } = await params;
@@ -21,6 +22,7 @@ const Page = async ({ params }: RouteParams) => {
     userId: user?.id!,
   });
   console.log("feedback", feedback);
+  console.log("feedback id", feedback?.id);
 
   return (
     <section className="section-feedback">
@@ -101,16 +103,9 @@ const Page = async ({ params }: RouteParams) => {
           </Link>
         </Button>
 
-        <Button className="btn-primary flex-1">
-          <Link
-            href={`/interview/${id}`}
-            className="flex w-full justify-center"
-          >
-            <p className="text-sm font-semibold text-black text-center">
-              Retake Interview
-            </p>
-          </Link>
-        </Button>
+        {feedback && (
+          <RetakeInterviewButton feedbackId={feedback.id} interviewId={id} />
+        )}
       </div>
     </section>
   );

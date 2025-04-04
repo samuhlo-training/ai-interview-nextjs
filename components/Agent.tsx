@@ -39,7 +39,10 @@ const Agent = ({
 
     const onMessage = (message: Message) => {
       if (message.type === "transcript" && message.transcriptType === "final") {
-        const newMessage = { role: message.role, content: message.transcript };
+        const newMessage = {
+          role: message.role as "user" | "assistant",
+          content: message.transcript,
+        };
         setMessages((prev) => [...prev, newMessage]);
       }
     };
