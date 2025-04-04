@@ -120,3 +120,13 @@ export async function getFeedbackByInterviewId(
   const feedbackDoc = querySnapshot.docs[0];
   return { id: feedbackDoc.id, ...feedbackDoc.data() } as Feedback;
 }
+
+export async function deleteFeedbackById(id: string): Promise<boolean> {
+  try {
+    await db.collection("feedback").doc(id).delete();
+    return true;
+  } catch (error) {
+    console.error("Error deleting feedback: ", error);
+    return false;
+  }
+}

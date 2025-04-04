@@ -1,6 +1,8 @@
 "use server";
 
 import { db, auth } from "@/firabase/admin";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 
 const ONE_WEEK = 60 * 60 * 24 * 7;
@@ -113,4 +115,11 @@ export async function isAuthenticated() {
   const user = await getCurrentUser();
   return !!user;
   // ''-> !'' -> true -> !true -> false
+}
+
+export async function signOut() {
+  const cookieStore = await cookies();
+  cookieStore.delete("session");
+  revalidatePath("/");
+  redirect("/sign-in");
 }
