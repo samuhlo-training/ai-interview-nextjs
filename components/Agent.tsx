@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
 import { vapi } from "@/lib/vapi.sdk";
@@ -32,6 +33,7 @@ const Agent = ({
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [callStatus, setCallStatus] = useState<CallStatus>(CallStatus.INACTIVE);
   const [messages, setMessages] = useState<SavedMessage[]>([]);
+  const [hasPermissionError, setHasPermissionError] = useState(false);
 
   useEffect(() => {
     const onCallStart = () => setCallStatus(CallStatus.ACTIVE);
@@ -49,8 +51,30 @@ const Agent = ({
     const onSpeechStart = () => setIsSpeaking(true);
     const onSpeechEnd = () => setIsSpeaking(false);
 
-    const onError = (error: Error) => {
+    const onError = (error: any) => {
       console.log("Error:", error);
+
+      // Manejo específico de errores de permisos de cámara/micrófono
+      if (error.action === "camera-error" || error.action === "mic-error") {
+        setHasPermissionError(true);
+        setCallStatus(CallStatus.INACTIVE);
+
+        const deviceType =
+          error.action === "camera-error" ? "cámara" : "micrófono";
+        toast.error(`Error de permisos`, {
+          description: `No se pudo acceder a tu ${deviceType}. Por favor, permite el acceso en la configuración de tu navegador.`,
+          duration: 6000,
+        });
+      } else if (error.errorMsg || error.error) {
+        const errorMessage =
+          error.errorMsg?.message ||
+          error.error?.message ||
+          "Error desconocido";
+        toast.error("Error en la llamada", {
+          description: errorMessage,
+          duration: 5000,
+        });
+      }
     };
 
     vapi.on("call-start", onCallStart);
@@ -99,26 +123,39 @@ const Agent = ({
 
   const handleCall = async () => {
     setCallStatus(CallStatus.CONNECTING);
+    setHasPermissionError(false);
+
     const assistantId = process.env.NEXT_PUBLIC_VAPI_ASSISTANT_ID;
 
-    if (type === "generate") {
-      await vapi.start(assistantId, {
-        variableValues: {
-          username: userName,
-          userid: userId,
-        },
-      });
-    } else {
-      let formattedQuestions = "";
-      if (questions) {
-        formattedQuestions = questions
-          .map((question) => `-${question}`)
-          .join("\n");
+    try {
+      if (type === "generate") {
+        await vapi.start(assistantId, {
+          variableValues: {
+            username: userName,
+            userid: userId,
+          },
+        });
+      } else {
+        let formattedQuestions = "";
+        if (questions) {
+          formattedQuestions = questions
+            .map((question) => `-${question}`)
+            .join("\n");
+        }
+        await vapi.start(interviewer, {
+          variableValues: {
+            questions: formattedQuestions,
+          },
+        });
       }
-      await vapi.start(interviewer, {
-        variableValues: {
-          questions: formattedQuestions,
-        },
+    } catch (error: any) {
+      console.error("Error starting call:", error);
+      setCallStatus(CallStatus.INACTIVE);
+
+      toast.error("No se pudo iniciar la llamada", {
+        description:
+          "Verifica que hayas dado permisos para usar la cámara y el micrófono.",
+        duration: 5000,
       });
     }
   };
@@ -141,6 +178,41 @@ const Agent = ({
 
   return (
     <>
+      {hasPermissionError && (
+        <div className="w-full max-w-2xl mx-auto mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-start gap-3">
+            <svg
+              className="w-5 h-5 text-red-600 mt-0.5"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <div className="flex-1">
+              <h4 className="text-sm font-semibold text-red-800 mb-1">
+                Permisos de dispositivo requeridos
+              </h4>
+              <p className="text-sm text-red-700 mb-2">
+                Para realizar la entrevista, necesitas permitir el acceso a tu
+                cámara y micrófono.
+              </p>
+              <ol className="text-xs text-red-600 list-decimal list-inside space-y-1">
+                <li>
+                  Haz clic en el icono del candado/información en la barra de
+                  direcciones
+                </li>
+                <li>Selecciona "Configuración del sitio" o "Permisos"</li>
+                <li>Permite el acceso a la cámara y el micrófono</li>
+                <li>Recarga la página e intenta nuevamente</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="call-view">
         <div className="card-interviewer">
           <div className="avatar">
